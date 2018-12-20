@@ -12,15 +12,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bson.Document;
 
-import com.mongodb.MongoClient;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCredential;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.FindIterable;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.result.UpdateResult;
+
 /**
  * @author pyt
  * @createTime 2018年10月17日上午9:54:32
@@ -74,34 +77,16 @@ public class MongoDBUtils {
             logger.error(PLEASE_SEND_IP);
             return null;
         }
+        MongoCredential credential = MongoCredential.createScramSha256Credential(user_name, "jh_strawberry", psd.toCharArray());
+    	MongoClient mongoClient = MongoClients.create(
+    	        MongoClientSettings.builder()
+    	                .applyToClusterSettings(builder -> 
+    	                        builder.hosts(Arrays.asList(new ServerAddress(host, port))))
+    	                .credential(credential)
+    	                .build());
  
-        return new MongoClient(host, port);
+        return mongoClient;
     }
- 
- 
-    /**
-     * 批量删除mongo库
-     * @param mongoClient
-     * @param dbNames
-     * @return
-     */
-    public String bulkDropDataBase(MongoClient mongoClient,String...dbNames){
- 
-        if(null == mongoClient) return PLEASE_INSTANCE_MONGOCLIENT;
- 
-        if(null==dbNames || dbNames.length==0){
-            return PLEASE_SEND_MONGO_REPOSITORY;
-        }
-        try {
-            Arrays.asList(dbNames).forEach(dbName -> mongoClient.dropDatabase(dbName));
-            logger.info(DELETE_MONGO_REPOSITORY_SUCCESS);
-        }catch (Exception e){
-            e.printStackTrace();
-            logger.error(DELETE_MONGO_REPOSITORY_EXCEPTION);
-        }
-        return dbNames == null ? NOT_DELETE_MONGO_REPOSITORY:DELETE_MONGO_REPOSITORY + String.join(",",dbNames);
-    }
- 
  
     /**
      * 创建指定database的collection
@@ -156,42 +141,7 @@ public class MongoDBUtils {
  
         return collectionDocuments;
     }
- 
-    /**
-     * 获取到MongoClient
-     * @param ip
-     * @param port
-     * @param userName
-     * @param dbName
-     * @param psw
-     * @returnMongoClient
-     */
-    @SuppressWarnings("deprecation")
-	public static MongoClient getMongoClientByCredential(String ip,int port,String userName,String dbName,String psw){
-        ServerAddress serverAddress = new ServerAddress(ip,port);
-        List<ServerAddress> addrs = new ArrayList<ServerAddress>();
-        addrs.add(serverAddress);
- 
-        //MongoCredential.createScramSha1Credential()三个参数分别为 用户名 数据库名称 密码
-        MongoCredential credential = MongoCredential.createScramSha1Credential(user_name, dbName, psd.toCharArray());
-        List<MongoCredential> credentials = new ArrayList<MongoCredential>();
-        credentials.add(credential);
- 
-        //通过连接认证获取MongoDB连接
-        MongoClient mongoClient = new MongoClient(addrs,credentials);
-        return mongoClient;
-    }
-    /**
-     *  获取到MongoClient
-     * @param ip
-     * @param port
-     * @return
-     */
-    public static MongoClient getMongoClient(String ip,int port) {
-    	MongoClient mongoClient = new MongoClient(ip,port);
-    	return mongoClient;
-    }
- 
+
     /**
      * 插入文档数据
      * @param mongoCollection
